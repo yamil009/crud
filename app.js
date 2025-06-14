@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // Ruta raíz
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Configuración de la base de datos
@@ -67,7 +67,7 @@ app.put('/estudiantes/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { nombre, cu, grupo, celular, gmail } = req.body;
-    
+
     const [result] = await pool.execute(
       'UPDATE estudiantes SET nombre = ?, cu = ?, grupo = ?, celular = ?, gmail = ? WHERE id = ?',
       [nombre, cu, grupo, celular, gmail, id]
@@ -89,7 +89,7 @@ app.delete('/estudiantes/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const [result] = await pool.execute('DELETE FROM estudiantes WHERE id = ?', [id]);
-    
+
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Estudiante no encontrado' });
     }
@@ -103,8 +103,9 @@ app.delete('/estudiantes/:id', async (req, res) => {
 
 // Iniciar el servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`Servidor corriendo en http://${HOST}:${PORT}`);
 });
 
 // Manejo de errores no capturados
