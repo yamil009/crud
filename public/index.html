@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎓 Sistema de Gestión de Estudiantes</title>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Estilos del modal -->
+    <link rel="stylesheet" href="css/modal.css">
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+</head>
+<body class="bg-gradient-to-bottom">
+    <!-- Indicador de servidor -->
+    <div class="position-fixed top-0 end-0 m-3">
+        <span class="badge bg-light text-dark p-2 shadow-sm" style="font-size: 0.9rem; border: 1px solid #e0e0e0;">
+            <i class="bi bi-server me-1"></i>Servidor NodeJS 1
+        </span>
+    </div>
+    
+    <div class="container py-5">
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold text-gradient mb-3">
+                <i class="bi bi-mortarboard-fill me-2"></i>Sistema de Gestión de Estudiantes
+            </h1>
+            <p class="lead text-muted mb-4">Administra la información de los estudiantes de manera sencilla y eficiente</p>
+            <div class="divider"></div>
+        </div>
+        
+        <!-- Formulario para agregar/editar estudiantes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 id="formTitle">Agregar Nuevo Estudiante</h5>
+            </div>
+            <div class="card-body">
+                <form id="estudianteForm">
+                    <input type="hidden" id="estudianteId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nombre" class="form-label">Nombre Completo</label>
+                            <input type="text" class="form-control" id="nombre" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="cu" class="form-label">Carnet Universitario (CU)</label>
+                            <input type="text" class="form-control" id="cu" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="grupo" class="form-label">Grupo</label>
+                            <select class="form-select" id="grupo" required>
+                                <option value="" disabled selected>Selecciona un grupo</option>
+                                <option value="A1">A1</option>
+                                <option value="A2">A2</option>
+                                <option value="B1">B1</option>
+                                <option value="B2">B2</option>
+                                <option value="C1">C1</option>
+                                <option value="C2">C2</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="celular" class="form-label">Celular</label>
+                            <div class="input-group">
+                                <input type="tel" class="form-control" id="celular" required>
+                                <button class="btn btn-outline-secondary" type="button" id="generarCelular">
+                                    <i class="bi bi-shuffle"></i> Generar
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="gmail" class="form-label">Gmail</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="gmail" placeholder="nombredeusuario" required>
+                                <span class="input-group-text">@gmail.com</span>
+                            </div>
+                            <input type="hidden" id="gmailCompleto">
+                        </div>
+                    </div>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" id="btnCancelar" class="btn btn-outline-secondary me-md-2" style="display: none;">
+    <i class="bi bi-x-lg me-1"></i> Cancelar
+</button>
+                        <button type="submit" class="btn btn-primary">
+    <i class="bi bi-save me-1"></i> Guardar
+</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tabla de estudiantes -->
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0 d-flex align-items-center">
+                    <i class="bi bi-people me-2"></i>Lista de Estudiantes
+                </h5>
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm text-primary me-2 d-none" id="loadingStudents" role="status" style="width: 1rem; height: 1rem;">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <span class="badge bg-light text-primary px-3 py-2" id="studentsCount">0 estudiantes</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="px-4">ID</th>
+                                <th class="px-4">Nombre</th>
+                                <th class="px-4">CU</th>
+                                <th class="px-4">Grupo</th>
+                                <th class="px-4">Celular</th>
+                                <th class="px-4">Gmail</th>
+                                <th class="text-end px-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody" class="border-top-0">
+                            <!-- Los estudiantes se cargarán aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación para eliminar -->
+    <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Estás seguro de que deseas eliminar a este estudiante? Esta acción no se puede deshacer.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">
+    <i class="bi bi-x-lg me-1"></i> Cancelar
+</button>
+<button type="button" class="btn btn-danger" id="confirmarEliminar">
+    <i class="bi bi-trash-fill me-1"></i> Eliminar
+</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Modal de edición -->
+    <script src="js/modalEditar.js"></script>
+    <!-- Script principal -->
+    <script src="js/main.js"></script>
+</body>
+</html>
