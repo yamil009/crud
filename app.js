@@ -103,9 +103,8 @@ app.delete('/estudiantes/:id', async (req, res) => {
 
 // Iniciar el servidor
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0';
-app.listen(PORT, HOST, () => {
-  console.log(`Servidor corriendo en http://${HOST}:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
 
 // Manejo de errores no capturados
