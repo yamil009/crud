@@ -1,5 +1,16 @@
 const mysql = require('mysql2/promise');
 const { EventEmitter } = require('events');
+const chalk = require('chalk');
+
+// Configuración de colores
+const colors = {
+  success: chalk.green.bold,
+  error: chalk.red.bold,
+  warning: chalk.yellow.bold,
+  info: chalk.blue.bold,
+  highlight: chalk.cyan.bold,
+  timestamp: chalk.gray
+};
 
 class DatabaseManager extends EventEmitter {
   constructor() {
@@ -40,10 +51,10 @@ class DatabaseManager extends EventEmitter {
       const conn = await this.masterPool.getConnection();
       await conn.ping();
       conn.release();
-      console.log('✅ Conexión MAESTRA establecida correctamente');
+      console.log(colors.success('✓') + ' ' + colors.info('Conexión MAESTRA establecida correctamente'));
       return true;
     } catch (error) {
-      console.error('❌ Error al conectar con la base de datos MAESTRA:', error.message);
+      console.error(colors.error('✗') + ' ' + colors.error('Error al conectar con la base de datos MAESTRA:'), error.message);
       throw error;
     }
   }
@@ -67,12 +78,14 @@ class DatabaseManager extends EventEmitter {
       const conn = await this.slavePool.getConnection();
       await conn.ping();
       conn.release();
-      console.log('✅ Conexión ESCLAVA establecida correctamente');
+      console.log(colors.success('✓') + ' ' + colors.info('Conexión ESCLAVA establecida correctamente'));
       this.usingSlave = true;
       this.emit('slaveStatus', true);
       return true;
     } catch (error) {
-      console.warn('⚠️  No se pudo conectar al esclavo, usando solo el maestro');
+      const timestamp = new Date().toISOString();
+      console.warn(colors.warning('⚠') + ' ' + colors.timestamp(`[${timestamp}]`) + ' ' + 
+                 colors.warning('No se pudo conectar al esclavo, usando solo el maestro'));
       this.usingSlave = false;
       this.emit('slaveStatus', false);
       this.scheduleSlaveRetry();
@@ -83,7 +96,9 @@ class DatabaseManager extends EventEmitter {
   scheduleSlaveRetry() {
     if (this.retryTimer) clearTimeout(this.retryTimer);
     this.retryTimer = setTimeout(() => {
-      console.log('🔁 Intentando reconectar con el esclavo...');
+      const timestamp = new Date().toISOString();
+    console.log(colors.highlight('⟳') + ' ' + colors.timestamp(`[${timestamp}]`) + ' ' + 
+               colors.highlight('Intentando reconectar con el esclavo...'));
       this.initializeSlave();
     }, this.retryDelay);
   }
@@ -114,7 +129,7 @@ class DatabaseManager extends EventEmitter {
         slave: this.usingSlave
       };
     } catch (error) {
-      console.error('❌ Error en health check:', error.message);
+      console.error(colors.error('✗') + ' ' + colors.error('Error en health check:'), error.message);
       return {
         status: 'unhealthy',
         master: false,

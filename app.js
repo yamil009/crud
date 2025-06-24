@@ -2,7 +2,27 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const db = require('./db');
+const chalk = require('chalk');
 const app = express();
+
+// Configuración de colores
+const colors = {
+  success: chalk.green.bold,
+  error: chalk.red.bold,
+  warning: chalk.yellow.bold,
+  info: chalk.blue.bold,
+  highlight: chalk.cyan.bold,
+  timestamp: chalk.gray,
+  method: (method) => {
+    const colors = {
+      'GET': chalk.green.bold,
+      'POST': chalk.blue.bold,
+      'PUT': chalk.yellow.bold,
+      'DELETE': chalk.red.bold
+    };
+    return (colors[method] || chalk.white.bold)(method);
+  }
+};
 
 // Middleware
 app.use(express.json());
@@ -20,7 +40,7 @@ app.use((req, res, next) => {
     }
     next();
   } catch (error) {
-    console.error('Error al obtener conexión:', error);
+    console.error(colors.error('Error al obtener conexión:'), error);
     res.status(500).json({ error: 'Error de conexión con la base de datos' });
   }
 });
@@ -47,7 +67,7 @@ app.get('/estudiantes', async (req, res) => {
     const [rows] = await req.db.query('SELECT * FROM estudiantes');
     res.json(rows);
   } catch (error) {
-    console.error('Error al obtener estudiantes:', error);
+    console.error(colors.error('Error al obtener estudiantes:'), error);
     res.status(500).json({ error: 'Error al obtener estudiantes' });
   }
 });
@@ -77,7 +97,7 @@ app.post('/estudiantes', async (req, res) => {
       gmail
     });
   } catch (error) {
-    console.error('Error al agregar estudiante:', error);
+    console.error(colors.error('Error al agregar estudiante:'), error);
     res.status(500).json({ error: 'Error al agregar estudiante' });
   }
 });
@@ -105,7 +125,7 @@ app.put('/estudiantes/:id', async (req, res) => {
 
     res.json({ id, nombre, cu, grupo, celular, gmail });
   } catch (error) {
-    console.error('Error al actualizar estudiante:', error);
+    console.error(colors.error('Error al actualizar estudiante:'), error);
     res.status(500).json({ error: 'Error al actualizar estudiante' });
   }
 });
@@ -123,7 +143,7 @@ app.delete('/estudiantes/:id', async (req, res) => {
 
     res.status(204).send();
   } catch (error) {
-    console.error('Error al eliminar estudiante:', error);
+    console.error(colors.error('Error al eliminar estudiante:'), error);
     res.status(500).json({ error: 'Error al eliminar estudiante' });
   }
 });
@@ -140,11 +160,23 @@ async function startServer() {
 
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
-      console.log(`Servidor corriendo en http://localhost:${PORT}`);
-      console.log(`Endpoint de salud: http://localhost:${PORT}/health`);
+      console.log(colors.success('✓') + ' ' + colors.info(`Servidor corriendo en http://localhost:${PORT}`));
+      console.log(colors.info('↳') + ' ' + colors.highlight(`Endpoint de salud: http://localhost:${PORT}/health`));
+      
+      // Mostrar información de las bases de datos
+      console.log('\n' + colors.info('🔌 Configuración de bases de datos:'));
+      console.log(colors.info('├─ ') + colors.highlight('MAESTRO:') + ` ${process.env.DB_MASTER_HOST}`);
+      console.log(colors.info('└─ ') + colors.highlight('ESCLAVO: ') + ` ${process.env.DB_SLAVE_HOST}`);
+      
+      // Mostrar rutas disponibles
+      console.log('\n' + colors.info('🛣️  Rutas disponibles:'));
+      console.log(colors.info('├─ ') + colors.method('GET') + '    /estudiantes');
+      console.log(colors.info('├─ ') + colors.method('POST') + '   /estudiantes');
+      console.log(colors.info('├─ ') + colors.method('PUT') + '    /estudiantes/:id');
+      console.log(colors.info('└─ ') + colors.method('DELETE') + ' /estudiantes/:id');
     });
   } catch (error) {
-    console.error('No se pudo iniciar el servidor:', error);
+    console.error(colors.error('✗ No se pudo iniciar el servidor:'), error);
     process.exit(1);
   }
 }
@@ -153,8 +185,30 @@ startServer();
 
 // Manejo de errores no capturados
 process.on('unhandledRejection', (err) => {
-  console.error('Error no manejado:', err);
+  const timestamp = new Date().toISOString();
+  console.error('\n' + '='.repeat(80));
+  console.error(colors.timestamp(`[${timestamp}]`) + ' ' + colors.error('✗ ERROR NO MANEJADO'));
+  console.error('='.repeat(80));
+  console.error(err);
+  console.error('='.repeat(80) + '\n');
   process.exit(1);
 });
+
+// Manejo de excepciones no capturadas
+process.on('uncaughtException', (err) => {
+  const timestamp = new Date().toISOString();
+  console.error('\n' + '='.repeat(80));
+  console.error(colors.timestamp(`[${timestamp}]`) + ' ' + colors.error('✗ EXCEPCIÓN NO CAPTURADA'));
+  console.error('='.repeat(80));
+  console.error(err);
+  console.error('='.repeat(80) + '\n');
+  process.exit(1);
+});
+
+// Mostrar información de inicio
+console.clear();
+console.log(colors.highlight('='.repeat(60)));
+console.log(colors.info('🚀 Iniciando Sistema de Gestión de Estudiantes'));
+console.log(colors.highlight('='.repeat(60)));
 
 module.exports = app;
