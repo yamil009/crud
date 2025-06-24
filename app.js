@@ -15,21 +15,54 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Configuración de la base de datos
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'escuela',
-  port: process.env.DB_PORT || 3306
+// Configuración de la base de datos Maestro (Escritura)
+const masterDbConfig = {
+  host: process.env.DB_MASTER_HOST || 'localhost',
+  user: process.env.DB_MASTER_USER || 'root',
+  password: process.env.DB_MASTER_PASSWORD || '',
+  database: process.env.DB_MASTER_DATABASE || 'escuela',
+  port: process.env.DB_MASTER_PORT || 3306,
+  connectionLimit: 10,
+  waitForConnections: true,
+  queueLimit: 0
 };
 
-// Crear pool de conexiones
-let pool;
+// Configuración de la base de datos Esclavo (Lectura)
+const slaveDbConfig = {
+  host: process.env.DB_SLAVE_HOST || 'localhost',
+  user: process.env.DB_SLAVE_USER || 'root',
+  password: process.env.DB_SLAVE_PASSWORD || '',
+  database: process.env.DB_SLAVE_DATABASE || 'escuela',
+  port: process.env.DB_SLAVE_PORT || 3306,
+  connectionLimit: 10,
+  waitForConnections: true,
+  queueLimit: 0
+};
+
+// Crear pools de conexiones
+let masterPool;
+let slavePool;
+
+// Middleware para enrutar consultas de lectura al esclavo
+app.use((req, res, next) => {
+  // Si es una petición GET, asumimos que es de lectura
+  if (req.method === 'GET') {
+    req.db = slavePool;
+  } else {
+    // Para POST, PUT, DELETE, etc., usamos el maestro
+    req.db = masterPool;
+  }
+  next();
+});
 
 try {
-  pool = mysql.createPool(dbConfig);
-  console.log('Conexión a la base de datos establecida');
+  // Crear pool de conexiones para el maestro
+  masterPool = mysql.createPool(masterDbConfig);
+  console.log('Conexión a la base de datos MAESTRA establecida correctamente');
+  
+  // Crear pool de conexiones para el esclavo
+  slavePool = mysql.createPool(slaveDbConfig);
+  console.log('Conexión a la base de datos ESCLAVA establecida correctamente');
 } catch (error) {
   console.error('Error al conectar a la base de datos:', error);
   process.exit(1);
@@ -40,7 +73,8 @@ try {
 app.post('/estudiantes', async (req, res) => {
   try {
     const { nombre, cu, grupo, celular, gmail } = req.body;
-    const [result] = await pool.execute(
+    // Usar siempre el maestro para operaciones de escritura
+    const [result] = await masterPool.execute(
       'INSERT INTO estudiantes (nombre, cu, grupo, celular, gmail) VALUES (?, ?, ?, ?, ?)',
       [nombre, cu, grupo, celular, gmail]
     );
@@ -54,7 +88,8 @@ app.post('/estudiantes', async (req, res) => {
 // Obtener todos los estudiantes
 app.get('/estudiantes', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT * FROM estudiantes');
+    // Usar req.db que ya está configurado por el middleware
+    const [rows] = await req.db.execute('SELECT * FROM estudiantes');
     res.json(rows);
   } catch (error) {
     console.error('Error al obtener estudiantes:', error);
@@ -68,7 +103,8 @@ app.put('/estudiantes/:id', async (req, res) => {
     const { id } = req.params;
     const { nombre, cu, grupo, celular, gmail } = req.body;
 
-    const [result] = await pool.execute(
+    // Usar siempre el maestro para operaciones de escritura
+    const [result] = await masterPool.execute(
       'UPDATE estudiantes SET nombre = ?, cu = ?, grupo = ?, celular = ?, gmail = ? WHERE id = ?',
       [nombre, cu, grupo, celular, gmail, id]
     );
@@ -88,7 +124,8 @@ app.put('/estudiantes/:id', async (req, res) => {
 app.delete('/estudiantes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const [result] = await pool.execute('DELETE FROM estudiantes WHERE id = ?', [id]);
+    // Usar siempre el maestro para operaciones de escritura
+    const [result] = await masterPool.execute('DELETE FROM estudiantes WHERE id = ?', [id]);
 
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Estudiante no encontrado' });
